@@ -1,4 +1,4 @@
-from z_keep_alive import keep_alive
+from keep_alive import keep_alive
 import os
 import discord
 import asyncio
@@ -6,11 +6,6 @@ from discord.ext import commands
 from discord.ext.commands import CommandNotFound
 from random import randint
 from datetime import datetime
-
-
-from pathlib import Path
-print("File      Path:", Path(__file__).absolute())
-print("Directory Path:", Path().absolute()) # Directory of current working directory, not __file__  
 
 
 names_reference = [
