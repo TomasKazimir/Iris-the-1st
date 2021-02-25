@@ -7,10 +7,17 @@ from discord.ext.commands import CommandNotFound
 from random import randint
 from datetime import datetime
 
+
+from pathlib import Path
+print("File      Path:", Path(__file__).absolute())
+print("Directory Path:", Path().absolute()) # Directory of current working directory, not __file__  
+
+
 names_reference = [
     '<:nohy:813552436312277042>', '<:mimitom:813490044018229268>',
     '<:jeee:813493670173999193>'
 ]
+
 all_commands = {
     "-hi": "A greeting message",
     "-hello": "A greeting message",
@@ -26,11 +33,12 @@ all_commands = {
     "-alarm": "`-alarm <HH:MM>` - Sets an alarm for a specified time\n`-alarm <HH:MM> <str>` - Sets a named alarm for a specified time",
     "-shutdown": "Shutdowns Iris (admin)"
 }
+
 sorted_commands = list(map(list, all_commands.items()))
 sorted_commands = sorted(sorted_commands, key=lambda x: x[0])
 
+#Tic-Tac-Toe
 winning_conditions = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]]
-
 player1 = ''
 player2 = ''
 turn = ''
@@ -38,16 +46,19 @@ gameOver = True
 board = []
 count: int
 
+#Flaška
 last = randint(0, 2)
+
 
 client = commands.Bot(command_prefix='-', case_insensitive=True)
 client.remove_command("help")
+
 
 @client.event
 async def on_ready():
     update_channels = [813182703981166632, 814069218957459456]
 
-    f = open('version.txt', 'r')
+    f = open('mem_txt_files/version.txt', 'r')
     v_number, v_counter, v_name = f.read().split(', ')
     v_number = int(v_number)
     v_counter = int(v_counter)
@@ -72,7 +83,7 @@ async def on_ready():
 
     f.close()
 
-    f = open('version.txt', 'w')
+    f = open('mem_txt_files/version.txt', 'w')
     f.write(', '.join((str(v_number), str(v_counter), str(v_name))))
     f.close()
 
@@ -89,14 +100,7 @@ async def on_ready():
     print(client.user)
 
 
-@client.event
-async def on_command_error(ctx, error):
-    if isinstance(error, CommandNotFound):
-        await ctx.send('{} is not a valid command. Better luck next time!'.format(ctx.message.content))
-        await ctx.message.delete()
-        return
-    raise error
-
+# NOTES funcions
 
 @client.command()
 async def note(ctx, *new_note):
@@ -105,7 +109,7 @@ async def note(ctx, *new_note):
     stored_notes = []
 
     try:
-        stored_notes = read_file('notes.txt').split('\n')
+        stored_notes = read_file('mem_txt_files/notes.txt').split('\n')
         if stored_notes[0] == '': stored_notes.pop()
         print('stored notes: {}'.format(stored_notes))
 
@@ -127,19 +131,27 @@ async def note(ctx, *new_note):
 
         output = output + str(i) + ' - ' + note + '\n'
 
-    write_file('notes.txt', save)
+    write_file('mem_txt_files/notes.txt', save)
 
     await ctx.send('your notes:\n{}'.format(output))
 
 
-client.command()
+@client.command()
 async def notes(ctx):
-    stored_notes = read_file('notes.txt').split('\n')
+    stored_notes = read_file('mem_txt_files/notes.txt').split('\n')
+
+    output = ''
+    i = 0
+    for note in stored_notes:
+        i += 1
+        output = output + str(i) + ' - ' + note + '\n'
+
+    await ctx.send('your notes:\n{}'.format(output))
 
 @client.command()
 async def delnote(ctx, *n_del_nums):
 
-    f = open("notes.txt", "r")
+    f = open("mem_txt_files/notes.txt", "r")
     lines = f.readlines()
     f.close()
 
@@ -183,7 +195,7 @@ async def delnote(ctx, *n_del_nums):
             return
 
 
-    f = open("notes.txt", "w")
+    f = open("mem_txt_files/notes.txt", "w")
     deleted_notes = []
     for line in lines:
         if lines.index(line) not in n_del_nums:
@@ -196,15 +208,8 @@ async def delnote(ctx, *n_del_nums):
     f.close()
 
     await ctx.send('The following notes have been deleted: {}'.format(', '.join(deleted_notes)))
-    
 
-
-@delnote.error
-async def delnote_error(ctx, error):
-    if isinstance(error, ValueError):
-        await ctx.send('')
-        await ctx.message.delete()
-
+# CHAT MANAGEMENT functions
 
 @client.command()
 async def clear(ctx, message_id=None):
@@ -220,6 +225,17 @@ async def clear(ctx, message_id=None):
 async def purge(ctx, amount: int = 10):
     await ctx.channel.purge(limit=amount + 1)
 
+
+@client.command()
+async def history(ctx, amount: int = 10):
+    output = ''
+    async for msg in ctx.channel.history(limit=amount):
+        output += msg.content + '\n'
+    await ctx.send(output)
+    await ctx.message.delete()
+
+
+# TIME functions
 
 @client.command()
 async def time(ctx):
@@ -271,6 +287,18 @@ async def alarm_error(ctx, error):
         await ctx.send('Be sure to enter a time <HH:MM>')
         await ctx.message.delete()
 
+# GAMES functions
+
+@client.command()
+async def undress(ctx):
+    names = kdo_koho()
+    embed = new_embed(title='Flaška', description='{0} is asking {1}'.format(names[0], names[1]), color=0x940096)
+    embed.set_author(name='Iris\'s Games Repository', url='https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot', icon_url='https://i.imgur.com/sDOZ6KF.jpg')
+    embed.set_thumbnail(url='https://media.istockphoto.com/photos/empty-bottle-from-transparent-glass-with-reflection-isolated-on-a-picture-id1033890540?s=612x612')
+    embed.set_footer(text='Choose your question carefully')
+    await ctx.send(embed=embed)
+    await ctx.message.delete()
+
 
 @client.command()
 async def tictactoe(ctx, pl2: discord.Member):
@@ -311,6 +339,14 @@ async def tictactoe(ctx, pl2: discord.Member):
             await ctx.send('It\'s <@{0}>\'s turn.'.format(player2.id))
     else:
         ctx.send('Game already in progress')
+
+
+@tictactoe.error
+async def tictactoe_error(ctx, error):
+    if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
+        await ctx.send('Please mention an opponent.')
+    elif isinstance(error, discord.ext.commands.errors.BadArgument):
+        await ctx.send('Please make sure to mention players properly (ie. <@813482693396398113>)')
 
 
 @client.command()
@@ -367,21 +403,6 @@ async def place(ctx, pos: int):
     await ctx.message.delete()
 
 
-def check_winner(mark):
-    global gameOver
-    for condition in winning_conditions:
-        if board[condition[0]] == mark and board[condition[1]] == mark and board[condition[2]] == mark:
-            gameOver = True
-
-
-@tictactoe.error
-async def ttt_error(ctx, error):
-    if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
-        await ctx.send('Please mention an opponent.')
-    elif isinstance(error, discord.ext.commands.errors.BadArgument):
-        await ctx.send('Please make sure to mention players properly (ie. <@813482693396398113>)')
-
-
 @place.error
 async def place_error(ctx, error):
     if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
@@ -389,6 +410,31 @@ async def place_error(ctx, error):
     elif isinstance(error, discord.ext.commands.errors.BadArgument):
         await ctx.send('Please make sure to enter an integer')
 
+
+def check_winner(mark):
+    global gameOver
+    for condition in winning_conditions:
+        if board[condition[0]] == mark and board[condition[1]] == mark and board[condition[2]] == mark:
+            gameOver = True
+
+#TEST functions
+
+@client.command()
+async def test(ctx):
+
+    f = read_file('txt files/test.txt')
+    print(f)
+
+    '''
+    fields = {'title1': 'value1', 'title2': 'value2', 'title3': 'value3'}
+    for field in fields:
+        print(field, fields[field])
+    await ctx.send(embed=new_embed(title='test', description='description', author=True, fields=fields))
+    await ctx.message.delete()
+    '''
+
+#IRIS CONVERSATION functions
+    # GREETING MESSAGES fuctions
 
 @client.command()
 async def hi(ctx):
@@ -404,21 +450,7 @@ async def hey(ctx):
 async def hello(ctx):
     await ctx.send("Hello!")
 
-
-@client.command()
-async def test(ctx):
-    test = 'ahoj\nkamo'
-    print(test)
-    test = test.replace('\n', '')
-    print(test)
-
-
-    fields = {'title1': 'value1', 'title2': 'value2', 'title3': 'value3'}
-    for field in fields:
-        print(field, fields[field])
-    await ctx.send(embed=new_embed(title='test', description='description', author=True, fields=fields))
-    await ctx.message.delete()
-
+    #IRIS HUMAN-LIKE SPEECH function
 
 @client.command()
 async def iris(ctx, *args):
@@ -430,6 +462,7 @@ async def iris(ctx, *args):
             title=output, author=True, footer=False, timestamp=False))
         await ctx.message.delete()
 
+#HELP & INFO
 
 @client.command()
 async def help(ctx, cmnd=None):
@@ -442,31 +475,21 @@ async def help(ctx, cmnd=None):
 
 @client.command()
 async def info(ctx):
-    file = open('information.txt', 'r')
+    file = open('mem_txt_files/information.txt', 'r')
     f_content = file.read()
     file.close()
     await ctx.send(f_content)
     await ctx.message.delete()
 
+#TECHNICAL
 
-@client.command()
-async def undress(ctx):
-    names = kdo_koho()
-    embed = new_embed(title='Flaška', description='{0} is asking {1}'.format(names[0], names[1]), color=0x940096)
-    embed.set_author(name='Iris\'s Games Repository', url='https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot', icon_url='https://i.imgur.com/sDOZ6KF.jpg')
-    embed.set_thumbnail(url='https://media.istockphoto.com/photos/empty-bottle-from-transparent-glass-with-reflection-isolated-on-a-picture-id1033890540?s=612x612')
-    embed.set_footer(text='Choose your question carefully')
-    await ctx.send(embed=embed)
-    await ctx.message.delete()
-
-
-@client.command()
-async def history(ctx, amount: int = 10):
-    output = ''
-    async for msg in ctx.channel.history(limit=amount):
-        output += msg.content + '\n'
-    await ctx.send(output)
-    await ctx.message.delete()
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, CommandNotFound):
+        await ctx.send('{} is not a valid command. Better luck next time!'.format(ctx.message.content))
+        await ctx.message.delete()
+        return
+    raise error
 
 
 @client.command()
@@ -475,6 +498,9 @@ async def shutdown(ctx):
         await ctx.send(embed=new_embed(title='Iris has been shut down'))
         await ctx.message.delete()
         await ctx.bot.logout()
+
+
+
 
 
 def kdo_koho():

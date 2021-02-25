@@ -1,4 +1,9 @@
 iris speech:            new_embed(title='text', author=True, footer=False, timestamp=False)
 
 fields setup:           fields = [['',''], ['', ''], ['', '']]
+                        fields = {'':'','':'','':''}
                         new_embed(title='text', fields=fields)
+
+main.py
+File      Path: /home/runner/Iris-the-1st/main.py
+Directory Path: /home/runner/Iris-the-1st
