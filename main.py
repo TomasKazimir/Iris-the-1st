@@ -7,7 +7,7 @@ from discord.ext.commands import CommandNotFound
 from random import randint
 from datetime import datetime
 
-#test updatu
+#test updatu - ok!
 
 names_reference = [
     '<:nohy:813552436312277042>', '<:mimitom:813490044018229268>',
