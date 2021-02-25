@@ -1,0 +1,4 @@
+iris speech:            new_embed(title='text', author=True, footer=False, timestamp=False)
+
+fields setup:           fields = [['',''], ['', ''], ['', '']]
+                        new_embed(title='text', fields=fields)

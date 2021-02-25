@@ -1,0 +1,23 @@
+Iris - The Prefect Discord Companion Bot
+**v0.1 Starter**
+
+features:
+`>games: Flaška, Tic-Tac-Toe (more are coming!) <- New!
+>greeting messages
+>authentic human-like conversation (an online developer required :D)
+>time functions to keep track of everything <- New!
+>chat managing functions to clear messages, view history and more <- New!
+>admin commands like `-shutdown`
+
+interactions:
+`>hyphen commands: Iris only listens to messages starting with '-'
+    - type `-commands` to list all available commands
+
+known bugs:
+>none found
+
+coming soon:
+>weather command
+>response to photos
+>greet new members
+>voice channel functions
