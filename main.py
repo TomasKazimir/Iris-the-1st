@@ -100,7 +100,6 @@ async def on_command_error(ctx, error):
 
 @client.command()
 async def note(ctx, *new_note):
-
     new_note = ' '.join([note for note in new_note])
     print('new note: {}'.format(new_note))
     stored_notes = []
@@ -132,9 +131,80 @@ async def note(ctx, *new_note):
 
     await ctx.send('your notes:\n{}'.format(output))
 
+
+client.command()
+async def notes(ctx):
+    stored_notes = read_file('notes.txt').split('\n')
+
 @client.command()
-async def delnote(ctx, *note_num):
-    pass
+async def delnote(ctx, *n_del_nums):
+
+    f = open("notes.txt", "r")
+    lines = f.readlines()
+    f.close()
+
+    if len(n_del_nums) == 0:
+        await ctx.send('Be sure to enter note indexes')
+        return
+
+    if len(lines) == 0:
+        await ctx.send('There are no notes - everything has already been deleted')
+        return
+
+    n_del_nums = list(n_del_nums)
+    try:
+        n_del_nums = [int(note_num.rstrip(',')) - 1 for note_num in n_del_nums]
+    except ValueError:
+        await ctx.send('Be sure to enter valid note indexes')
+        return
+
+    # delete line by index
+    error_output = []
+    print(n_del_nums)
+    print(len(lines) - 1)
+    for n_del_num in n_del_nums:
+        print('loop')
+        if len(lines) - 1 < n_del_num or n_del_num < 0:
+            print('invalid index found')
+            error_output.append(n_del_num)
+
+    for num in error_output:
+        n_del_nums.remove(num)
+    
+    error_output = [str(num + 1) for num in error_output]
+
+    print(n_del_nums)
+    print(error_output)
+
+    if len(error_output) > 0:
+        await ctx.send('No notes with indexes: {}'.format(', '.join(error_output)))
+        if len(n_del_nums) == 0:
+            await ctx.send('Be sure to enter valid note indexes')
+            return
+
+
+    f = open("notes.txt", "w")
+    deleted_notes = []
+    for line in lines:
+        if lines.index(line) not in n_del_nums:
+            if lines.index(line) + 1 == len(lines):
+                f.write(line.rstrip('\n'))
+            else:
+                f.write(line.rstrip('\n') + '\n')
+        else:
+            deleted_notes.append(line.rstrip('\n'))
+    f.close()
+
+    await ctx.send('The following notes have been deleted: {}'.format(', '.join(deleted_notes)))
+    
+
+
+@delnote.error
+async def delnote_error(ctx, error):
+    if isinstance(error, ValueError):
+        await ctx.send('')
+        await ctx.message.delete()
+
 
 @client.command()
 async def clear(ctx, message_id=None):
@@ -337,6 +407,12 @@ async def hello(ctx):
 
 @client.command()
 async def test(ctx):
+    test = 'ahoj\nkamo'
+    print(test)
+    test = test.replace('\n', '')
+    print(test)
+
+
     fields = {'title1': 'value1', 'title2': 'value2', 'title3': 'value3'}
     for field in fields:
         print(field, fields[field])
