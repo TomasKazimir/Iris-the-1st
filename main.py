@@ -53,8 +53,8 @@ client.remove_command("help")
 async def on_ready():
     update_channels = [813182703981166632, 814069218957459456]
 
-    f = open('mem_txt_files/version.txt', 'r')
-    v_number, v_counter, v_name = f.read().split(', ')
+    f = read_file('mem_txt_files/version.txt')
+    v_number, v_counter, v_name = f.split(', ')
     v_number = int(v_number)
     v_counter = int(v_counter)
     while True:
