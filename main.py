@@ -77,8 +77,6 @@ async def on_ready():
         else:
             break
 
-    f.close()
-
     f = open('mem_txt_files/version.txt', 'w')
     f.write(', '.join((str(v_number), str(v_counter), str(v_name))))
     f.close()
@@ -418,7 +416,7 @@ def check_winner(mark):
 @client.command()
 async def test(ctx):
 
-    f = read_file('txt files/test.txt')
+    f = read_file('mem_txt_files/test.txt')
     print(f)
 
     '''
