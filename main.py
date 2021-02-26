@@ -51,10 +51,14 @@ client.remove_command("help")
 
 @client.event
 async def on_ready():
+    print('\nI\'m in! {0}'.format(datetime.now().strftime('%H:%M:%S - %d/%m/%Y')))
+    print(client.user)
+    print()
+
+    #update message, version...
     update_channels = [813182703981166632, 814069218957459456]
 
-    f = read_file('mem_txt_files/version.txt')
-    v_number, v_counter, v_name = f.split(', ')
+    v_number, v_counter, v_name = read_file('mem_txt_files/version.txt').split(', ')
     v_number = int(v_number)
     v_counter = int(v_counter)
     while True:
@@ -66,20 +70,15 @@ async def on_ready():
             note = input('Name new features: ')
             note = 'It adds: ' + note
             break
-
         elif new_version in ['0', 'n', 'no', 'negative']:
             v_counter += 1
             note = str(input('Describe changes: '))
             note = 'Fixes, changes, etc.:  ' + note if note != '' else ''
             break
-
         else:
             break
 
-    f = open('mem_txt_files/version.txt', 'w')
-    f.write(', '.join((str(v_number), str(v_counter), str(v_name))))
-    f.close()
-
+    write_file('mem_txt_files/version.txt', ', '.join((str(v_number), str(v_counter), str(v_name))))
     output = 'v{0}.{1} {2}'.format(str(v_number), str(v_counter), str(v_name))
 
     for channel in update_channels:
@@ -89,9 +88,9 @@ async def on_ready():
             await channel.send(embed=new_embed(title=':sparkles: Oh, look at me, how shiny! :face_with_hand_over_mouth: :sparkles:\n', author=True, footer=False, timestamp=False))
         elif new_version in ['0', 'n', 'no', 'negative']:
             await channel.send(embed=new_embed(title=':screwdriver:  Once again, Iris is back on-line! {} :tools:'.format(output), description=note))
-    print('I\'m in! {0}'.format(datetime.now().strftime('%H:%M:%S - %d/%m/%Y')))
-    print(client.user)
+    print(f'Version setting finished, {output}\n')
 
+    # TODO: reset saved alarms
 
 # NOTES functions
 @client.command()
@@ -144,7 +143,7 @@ async def notes(ctx):
 @client.command()
 async def delnote(ctx, *n_del_nums):
     f = open("mem_txt_files/notes.txt", "r")
-    lines = f.readlines()
+    lines = [line.replace('\n', '') for line in f.readlines()]
     f.close()
 
     if len(n_del_nums) == 0:
@@ -164,10 +163,7 @@ async def delnote(ctx, *n_del_nums):
 
     # delete line by index
     error_output = []
-    print(n_del_nums)
-    print(len(lines) - 1)
     for n_del_num in n_del_nums:
-        print('loop')
         if len(lines) - 1 < n_del_num or n_del_num < 0:
             print('invalid index found')
             error_output.append(n_del_num)
@@ -177,25 +173,23 @@ async def delnote(ctx, *n_del_nums):
 
     error_output = [str(num + 1) for num in error_output]
 
-    print(n_del_nums)
-    print(error_output)
-
     if len(error_output) > 0:
         await ctx.send('No notes with indexes: {}'.format(', '.join(error_output)))
         if len(n_del_nums) == 0:
             await ctx.send('Be sure to enter valid note indexes')
             return
 
-    f = open("mem_txt_files/notes.txt", "w")
     deleted_notes = []
+    for num in sorted(n_del_nums, reverse=True):
+        deleted_notes.append(lines[num])
+        lines.pop(num)
+
+    f = open("mem_txt_files/notes.txt", "w")
     for line in lines:
-        if lines.index(line) not in n_del_nums:
-            if lines.index(line) + 1 == len(lines):
-                f.write(line.rstrip('\n'))
-            else:
-                f.write(line.rstrip('\n') + '\n')
+        if lines.index(line) != 0:
+            f.write('\n' + line)
         else:
-            deleted_notes.append(line.rstrip('\n'))
+            f.write(line)
     f.close()
 
     await ctx.send('The following notes have been deleted: {}'.format(', '.join(deleted_notes)))
@@ -240,9 +234,7 @@ async def time(ctx):
 
 @client.command()
 async def alarm(ctx, ring_time, *event_name):
-    print(event_name)
     event = ' - ' + ' '.join([word for word in event_name]) if event_name != () else ''
-    print(event)
     try:
         set_h, set_m = ring_time.split(':')
         if not 0 <= int(set_h) <= 23 or not 0 <= int(set_m) <= 59:
@@ -264,11 +256,60 @@ async def alarm(ctx, ring_time, *event_name):
     else:
         delta_t = int(set_h) * 60 + int(set_m) - (now_h * 60 + now_m)
 
+
+    save_alarm(set_h, set_m, event, delta_t, ctx.channel.id, ctx.message.author.mention)
+    alarm_task = asyncio.create_task(set_alarm(set_h, set_m, event, delta_t, ctx.channel.id, ctx.message.author.mention))
+
     await ctx.send(embed=new_embed(title='Alarm set to {0}:{1} {2}'.format(set_h, set_m, event), description='Remaining time: {0} hour(s) {1} minute(s)'.format(delta_t // 60, delta_t % 60), color=0x00ff11))
     await ctx.message.delete()
-    await asyncio.sleep(delta_t * 60)
-    await ctx.send(
-        embed=new_embed(title='Alarm' + event, description='{0}:{1} - {2}'.format(set_h, set_m, ctx.message.author.mention), color=0xff0000))
+
+    await alarm_task
+
+
+def save_alarm(set_h, set_m, event, delta_t, channel_id, author_mention):
+    new_alarm = '|'.join((str(set_h), str(set_m), str(event), str(delta_t), str(channel_id), str(author_mention)))
+
+    saved_alarms = read_file('mem_txt_files/alarms.txt').split('\n')
+
+    if saved_alarms[0] == '': saved_alarms.pop()
+    print('saved alarms: {}'.format(saved_alarms))
+
+    saved_alarms.append(new_alarm)
+    print('alarm to be saved: {}'.format(new_alarm))
+
+    save = ''
+    i = 0
+    for alarm in saved_alarms:
+        i += 1
+        if i != len(saved_alarms):
+            save = save + alarm + '\n'
+        else:
+            save = save + alarm
+    
+    write_file('mem_txt_files/alarms.txt', save)
+
+
+async def set_alarm(set_h, set_m, event, delta_t, channel_id, author_mention):
+    channel = client.get_channel(channel_id)
+    print('Alarm set to {0}:{1} {2}. Remaining time: {3} hour(s) {4} minute(s)'.format(set_h, set_m, event, delta_t // 60, delta_t % 60))
+    await asyncio.sleep(int(delta_t * 60)) 
+    await channel.send(embed=new_embed(title='Alarm' + event, description='{0}:{1} - {2}'.format(set_h, set_m, author_mention), color=0xff0000))
+
+    del_alarm = '|'.join((str(set_h), str(set_m), str(event), str(delta_t), str(channel_id), str(author_mention)))
+
+    f = open("mem_txt_files/alarms.txt", "r")
+    lines = [line.replace('\n', '') for line in f.readlines()]
+    f.close()
+
+    lines.remove(del_alarm)
+
+    f = open("mem_txt_files/alarms.txt", "w")
+    for line in lines:
+        if lines.index(line) != 0:
+            f.write('\n' + line)
+        else:
+            f.write(line)
+    f.close()
 
 
 @alarm.error
@@ -410,17 +451,24 @@ def check_winner(mark):
 
 # TEST functions
 @client.command()
-async def test(ctx):
-    f = read_file('mem_txt_files/test.txt')
-    print(f)
+async def test(ctx, *seconds):
+    print(ctx.message.author.mention)
+    tasks = []
+    for second in seconds:
+        task = asyncio.create_task(sleep_parallel(ctx, second))
+        tasks.append(task)
+    
+    for task in tasks:
+        await task
 
-    '''
-    fields = {'title1': 'value1', 'title2': 'value2', 'title3': 'value3'}
-    for field in fields:
-        print(field, fields[field])
-    await ctx.send(embed=new_embed(title='test', description='description', author=True, fields=fields))
-    await ctx.message.delete()
-    '''
+
+
+async def sleep_parallel(ctx, seconds):
+    print('sleeping at {}'.format(datetime.now().strftime('%S')))
+    await ctx.send('sleeping at {}'.format(datetime.now().strftime('%H:%M:%S')))
+    await asyncio.sleep(int(seconds))
+    print('waking up at {}'.format(datetime.now().strftime('%S')))
+    await ctx.send('waking up at {}'.format(datetime.now().strftime('%H:%M:%S')))
 
 
 # IRIS CONVERSATION functions
@@ -499,6 +547,7 @@ def kdo_koho():
     return_list = names_reference[last], names[0]
     last = names_reference.index(names[0])
     return return_list
+
 
 def new_embed(title, description=None, color=None, timestamp=True, footer=True, author=False, fields=None, fields_inline=False, thumbnail=False):
     embed = discord.Embed()
