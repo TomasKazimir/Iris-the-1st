@@ -94,7 +94,6 @@ async def on_ready():
 
 
 # NOTES functions
-
 @client.command()
 async def note(ctx, *new_note):
     new_note = ' '.join([note for note in new_note])
