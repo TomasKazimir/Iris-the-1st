@@ -90,7 +90,18 @@ async def on_ready():
             await channel.send(embed=new_embed(title=':screwdriver:  Once again, Iris is back on-line! {} :tools:'.format(output), description=note))
     print(f'Version setting finished, {output}\n')
 
-    # TODO: reset saved alarms
+    # read saved alarms
+    saved_alarms = read_file('mem_txt_files/alarms.txt').split('\n')
+    if saved_alarms[0] == '': saved_alarms.pop()
+    print('saved alarms: {}'.format(saved_alarms))
+
+    alarm_tasks = []
+    for alarm in saved_alarms:
+        alarm_tasks.append(asyncio.create_task(set_alarm(*alarm.split('|'))))
+    
+    for task in alarm_tasks:
+        await task
+
 
 # NOTES functions
 @client.command()
@@ -256,9 +267,8 @@ async def alarm(ctx, ring_time, *event_name):
     else:
         delta_t = int(set_h) * 60 + int(set_m) - (now_h * 60 + now_m)
 
-
-    save_alarm(set_h, set_m, event, delta_t, ctx.channel.id, ctx.message.author.mention)
-    alarm_task = asyncio.create_task(set_alarm(set_h, set_m, event, delta_t, ctx.channel.id, ctx.message.author.mention))
+    save_alarm(set_h, set_m, event, ctx.channel.id, ctx.message.author.mention)
+    alarm_task = asyncio.create_task(set_alarm(set_h, set_m, event, ctx.channel.id, ctx.message.author.mention))
 
     await ctx.send(embed=new_embed(title='Alarm set to {0}:{1} {2}'.format(set_h, set_m, event), description='Remaining time: {0} hour(s) {1} minute(s)'.format(delta_t // 60, delta_t % 60), color=0x00ff11))
     await ctx.message.delete()
@@ -266,8 +276,8 @@ async def alarm(ctx, ring_time, *event_name):
     await alarm_task
 
 
-def save_alarm(set_h, set_m, event, delta_t, channel_id, author_mention):
-    new_alarm = '|'.join((str(set_h), str(set_m), str(event), str(delta_t), str(channel_id), str(author_mention)))
+def save_alarm(set_h, set_m, event, channel_id, author_mention):
+    new_alarm = '|'.join((str(set_h), str(set_m), str(event), str(channel_id), str(author_mention)))
 
     saved_alarms = read_file('mem_txt_files/alarms.txt').split('\n')
 
@@ -289,13 +299,25 @@ def save_alarm(set_h, set_m, event, delta_t, channel_id, author_mention):
     write_file('mem_txt_files/alarms.txt', save)
 
 
-async def set_alarm(set_h, set_m, event, delta_t, channel_id, author_mention):
-    channel = client.get_channel(channel_id)
+async def set_alarm(set_h, set_m, event, channel_id, author_mention):
+
+    now = datetime.now()
+    now_m = int(now.strftime("%M"))
+    now_h = int(now.strftime("%H")) + 1
+    now_h %= 24
+
+    if int(set_h) * 60 + int(set_m) < (now_h * 60 + now_m):
+        delta_t = 24 * 60 - (now_h * 60 + now_m) + int(set_h) * 60 + int(set_m)
+    else:
+        delta_t = int(set_h) * 60 + int(set_m) - (now_h * 60 + now_m)
+
+    channel = client.get_channel(int(channel_id))
     print('Alarm set to {0}:{1} {2}. Remaining time: {3} hour(s) {4} minute(s)'.format(set_h, set_m, event, delta_t // 60, delta_t % 60))
     await asyncio.sleep(int(delta_t * 60)) 
+    print('done', channel)
     await channel.send(embed=new_embed(title='Alarm' + event, description='{0}:{1} - {2}'.format(set_h, set_m, author_mention), color=0xff0000))
 
-    del_alarm = '|'.join((str(set_h), str(set_m), str(event), str(delta_t), str(channel_id), str(author_mention)))
+    del_alarm = '|'.join((str(set_h), str(set_m), str(event), str(channel_id), str(author_mention)))
 
     f = open("mem_txt_files/alarms.txt", "r")
     lines = [line.replace('\n', '') for line in f.readlines()]
