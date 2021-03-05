@@ -3,7 +3,6 @@ import os
 import discord
 import asyncio
 from discord.ext import commands
-from discord.ext.commands import CommandNotFound
 from random import randint, choice
 from datetime import datetime
 
@@ -58,6 +57,7 @@ client.remove_command("help")
 
 @client.event
 async def on_ready():
+    await client.change_presence(status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.listening, name='-help'))
     print('\nI\'m in! {0}'.format(
         datetime.now().strftime('%H:%M:%S - %d/%m/%Y')))
     print(client.user)
@@ -252,7 +252,11 @@ async def clear(ctx, message_id=None):
 
 @client.command()
 async def purge(ctx, amount: int = 10):
-    await ctx.channel.purge(limit=amount + 1)
+    if ctx.message.guild.id != 812837958226804737:
+        await ctx.channel.purge(limit=amount + 1)
+    else:
+        await ctx.send(embed=new_embed(title='Your server does not support this function.'))
+        await ctx.message.delete()
 
 
 @client.command()
@@ -510,7 +514,7 @@ async def ltr(ctx, ltr):
                     await ctx.send(f'Nope!{drawings[game_state]}')
                 else:
                     await ctx.send('Yay!')
-                await ctx.send('Word: ' + display)
+                await ctx.send('Word: ' + display + '\nUsed letters: ' + str(', '.joint(guessed_letters)))
 
                 if '-' not in display or game_state == len(drawings) - 1:
                     if game_state == len(drawings) - 1:  # lost
@@ -712,29 +716,35 @@ async def sleep_parallel(ctx, seconds):
 # GREETING MESSAGES functions
 @client.command()
 async def hi(ctx):
-    await ctx.send("Hi!")
+    await ctx.send(embed=new_embed(title="Hi!"))
 
 
 @client.command()
 async def hey(ctx):
-    await ctx.send("Hey!")
+    await ctx.send(embed=new_embed(title="Hey!"))
 
 
 @client.command()
 async def hello(ctx):
-    await ctx.send("Hello!")
+    await ctx.send(embed=new_embed(title="Hello!"))
 
 
 # IRIS HUMAN-LIKE SPEECH function
+def is_me():
+    def predicate(ctx):
+        return ctx.bot.is_owner(ctx.author)
+    return commands.check(predicate)
+
+
 @client.command()
+@is_me()
 async def iris(ctx, *args):
-    if await ctx.bot.is_owner(ctx.author):
-        output = ''
+    output = ''
+    if args != ():
         for word in args:
             output += word + ' '
-        await ctx.send(embed=new_embed(
-            title=output, author=True, footer=False, timestamp=False))
-        await ctx.message.delete()
+        await ctx.send(embed=new_embed(title=output, author=True, footer=False, timestamp=False))
+    await ctx.message.delete()
 
 
 # HELP & INFO
@@ -764,12 +774,13 @@ async def info(ctx):
 # TECHNICAL
 @client.event
 async def on_command_error(ctx, error):
-    if isinstance(error, CommandNotFound):
-        await ctx.send(
-            '{} is not a valid command. Better luck next time!'.format(
-                ctx.message.content))
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send(embed=new_embed(title='{} is not a valid command. Better luck next time!'.format(ctx.message.content)))
         await ctx.message.delete()
         return
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send(embed=new_embed(title='Don\'t mess with me'))
+        await ctx.message.delete()
     raise error
 
 
@@ -805,11 +816,7 @@ def new_embed(title,
     embed = discord.Embed()
     embed.title = title
     if author:
-        embed.set_author(
-            name='Iris',
-            url=
-            'https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot',
-            icon_url='https://i.imgur.com/sDOZ6KF.jpg')
+        embed.set_author(name='Iris', url='https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot', icon_url='https://i.imgur.com/sDOZ6KF.jpg')
     embed.description = description if description is not None else None
     embed.color = color if color is not None else 0x004499
     if thumbnail is not False:
