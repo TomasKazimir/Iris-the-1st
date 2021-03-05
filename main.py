@@ -4,7 +4,7 @@ import discord
 import asyncio
 from discord.ext import commands
 from discord.ext.commands import CommandNotFound
-from random import randint
+from random import randint, choice
 from datetime import datetime
 
 # test update - ok!
@@ -20,21 +20,28 @@ all_commands = {
     "-hey": "A greeting message",
     "-info": "Displays info about Iris",
     "-undress": " Plays the game Flaška",
-    "-help": "`-help` - Shows all commands\n`-help <str>` - Shows a specified command",
-    "-tictactoe": "`-tictactoe <@Member>` - Challenges a member to a game of tic-tac-toe!",
+    "-help":
+    "`-help` - Shows all commands\n`-help <str>` - Shows a specified command",
+    "-tictactoe":
+    "`-tictactoe <@Member>` - Challenges a member to a game of tic-tac-toe!",
     "-place": "`-place <int>` - Places your mark on the specified position",
-    "-clear": "`-clear` - Deletes the last message in chat\n`-clear <message ID>` - Deletes a message by it\'s ID'",
+    "-clear":
+    "`-clear` - Deletes the last message in chat\n`-clear <message ID>` - Deletes a message by it\'s ID'",
     "-purge": "`-purge <int> - Deletes a number of messages",
     "-time": "Tells the time",
-    "-alarm": "`-alarm <HH:MM>` - Sets an alarm for a specified time\n`-alarm <HH:MM> <str>` - Sets a named alarm for a specified time",
-    "-shutdown": "Shutdowns Iris (admin)"
+    "-alarm":
+    "`-alarm <HH:MM>` - Sets an alarm for a specified time\n`-alarm <HH:MM> <str>` - Sets a named alarm for a specified time",
+    "-shutdown": "Shutdowns Iris (admin)",
+    "-hangman": "Starts a game of hangman.",
+    "-ltr": "`-ltr <char>` - Guess a letter in the game of hangman."
 }
 
 sorted_commands = list(map(list, all_commands.items()))
 sorted_commands = sorted(sorted_commands, key=lambda x: x[0])
 
 # Tic-Tac-Toe
-winning_conditions = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]]
+winning_conditions = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7],
+                      [2, 5, 8], [0, 4, 8], [2, 4, 6]]
 player1 = ''
 player2 = ''
 turn = ''
@@ -51,14 +58,35 @@ client.remove_command("help")
 
 @client.event
 async def on_ready():
-    print('\nI\'m in! {0}'.format(datetime.now().strftime('%H:%M:%S - %d/%m/%Y')))
+    print('\nI\'m in! {0}'.format(
+        datetime.now().strftime('%H:%M:%S - %d/%m/%Y')))
     print(client.user)
     print()
 
+    report = False
+    if report:
+        task = asyncio.create_task(update_version())
+        await task
+
+    # read saved alarms
+    saved_alarms = read_file('mem_txt_files/alarms.txt').split('\n')
+    if saved_alarms[0] == '': saved_alarms.pop()
+    print('saved alarms: {}'.format(saved_alarms))
+
+    alarm_tasks = []
+    for alarm in saved_alarms:
+        alarm_tasks.append(asyncio.create_task(set_alarm(*alarm.split('|'))))
+
+    for task in alarm_tasks:
+        await task
+
+
+async def update_version():
     #update message, version...
     update_channels = [813182703981166632, 814069218957459456]
 
-    v_number, v_counter, v_name = read_file('mem_txt_files/version.txt').split(', ')
+    v_number, v_counter, v_name = read_file('mem_txt_files/version.txt').split(
+        ', ')
     v_number = int(v_number)
     v_counter = int(v_counter)
     while True:
@@ -78,29 +106,31 @@ async def on_ready():
         else:
             break
 
-    write_file('mem_txt_files/version.txt', ', '.join((str(v_number), str(v_counter), str(v_name))))
+    write_file('mem_txt_files/version.txt', ', '.join(
+        (str(v_number), str(v_counter), str(v_name))))
     output = 'v{0}.{1} {2}'.format(str(v_number), str(v_counter), str(v_name))
 
     for channel in update_channels:
         channel = client.get_channel(channel)
         if new_version in ['1', 'y', 'yes', 'positive', 'ok']:
-            await channel.send(embed=new_embed(title='Release News :newspaper:', description='**{}** has been finished and is now online. \nType -commands or -info to see what\'s new!'.format(output)))
-            await channel.send(embed=new_embed(title=':sparkles: Oh, look at me, how shiny! :face_with_hand_over_mouth: :sparkles:\n', author=True, footer=False, timestamp=False))
+            await channel.send(embed=new_embed(
+                title='Release News :newspaper:',
+                description=
+                '**{0}** has been finished and is now online.\n{1}\nType -help for more info!'
+                .format(output, note)))
+            await channel.send(embed=new_embed(
+                title=
+                ':sparkles: Oh, look at me, how shiny! :face_with_hand_over_mouth: :sparkles:\n',
+                author=True,
+                footer=False,
+                timestamp=False))
         elif new_version in ['0', 'n', 'no', 'negative']:
-            await channel.send(embed=new_embed(title=':screwdriver:  Once again, Iris is back on-line! {} :tools:'.format(output), description=note))
+            await channel.send(embed=new_embed(
+                title=
+                ':screwdriver:  Once again, Iris is back on-line! {} :tools:'.
+                format(output),
+                description=note))
     print(f'Version setting finished, {output}\n')
-
-    # read saved alarms
-    saved_alarms = read_file('mem_txt_files/alarms.txt').split('\n')
-    if saved_alarms[0] == '': saved_alarms.pop()
-    print('saved alarms: {}'.format(saved_alarms))
-
-    alarm_tasks = []
-    for alarm in saved_alarms:
-        alarm_tasks.append(asyncio.create_task(set_alarm(*alarm.split('|'))))
-    
-    for task in alarm_tasks:
-        await task
 
 
 # NOTES functions
@@ -162,7 +192,8 @@ async def delnote(ctx, *n_del_nums):
         return
 
     if len(lines) == 0:
-        await ctx.send('There are no notes - everything has already been deleted')
+        await ctx.send(
+            'There are no notes - everything has already been deleted')
         return
 
     n_del_nums = list(n_del_nums)
@@ -185,7 +216,8 @@ async def delnote(ctx, *n_del_nums):
     error_output = [str(num + 1) for num in error_output]
 
     if len(error_output) > 0:
-        await ctx.send('No notes with indexes: {}'.format(', '.join(error_output)))
+        await ctx.send('No notes with indexes: {}'.format(
+            ', '.join(error_output)))
         if len(n_del_nums) == 0:
             await ctx.send('Be sure to enter valid note indexes')
             return
@@ -203,7 +235,8 @@ async def delnote(ctx, *n_del_nums):
             f.write(line)
     f.close()
 
-    await ctx.send('The following notes have been deleted: {}'.format(', '.join(deleted_notes)))
+    await ctx.send('The following notes have been deleted: {}'.format(
+        ', '.join(deleted_notes)))
 
 
 # CHAT MANAGEMENT functions
@@ -239,13 +272,15 @@ async def time(ctx):
     h = int(now.strftime("%H")) + 1
     h = h % 24
     now = str(h) + ":" + m_s
-    await ctx.send(embed=new_embed(title="It is " + now + " - Get up and do something!"))
+    await ctx.send(embed=new_embed(title="It is " + now +
+                                   " - Get up and do something!"))
     await ctx.message.delete()
 
 
 @client.command()
 async def alarm(ctx, ring_time, *event_name):
-    event = ' - ' + ' '.join([word for word in event_name]) if event_name != () else ''
+    event = ' - ' + ' '.join([word for word in event_name
+                              ]) if event_name != () else ''
     try:
         set_h, set_m = ring_time.split(':')
         if not 0 <= int(set_h) <= 23 or not 0 <= int(set_m) <= 59:
@@ -262,22 +297,29 @@ async def alarm(ctx, ring_time, *event_name):
     now_h = int(now.strftime("%H")) + 1
     now_h %= 24
 
-    if int(set_h) * 60 + int(set_m) < (now_h * 60 + now_m):
+    if int(set_h) * 60 + int(set_m) < now_h * 60 + now_m:
         delta_t = 24 * 60 - (now_h * 60 + now_m) + int(set_h) * 60 + int(set_m)
     else:
         delta_t = int(set_h) * 60 + int(set_m) - (now_h * 60 + now_m)
 
     save_alarm(set_h, set_m, event, ctx.channel.id, ctx.message.author.mention)
-    alarm_task = asyncio.create_task(set_alarm(set_h, set_m, event, ctx.channel.id, ctx.message.author.mention))
+    alarm_task = asyncio.create_task(
+        set_alarm(set_h, set_m, event, ctx.channel.id,
+                  ctx.message.author.mention))
 
-    await ctx.send(embed=new_embed(title='Alarm set to {0}:{1} {2}'.format(set_h, set_m, event), description='Remaining time: {0} hour(s) {1} minute(s)'.format(delta_t // 60, delta_t % 60), color=0x00ff11))
+    await ctx.send(embed=new_embed(
+        title='Alarm set to {0}:{1} {2}'.format(set_h, set_m, event),
+        description='Remaining time: {0} hour(s) {1} minute(s)'.format(
+            delta_t // 60, delta_t % 60),
+        color=0x00ff11))
     await ctx.message.delete()
 
     await alarm_task
 
 
 def save_alarm(set_h, set_m, event, channel_id, author_mention):
-    new_alarm = '|'.join((str(set_h), str(set_m), str(event), str(channel_id), str(author_mention)))
+    new_alarm = '|'.join((str(set_h), str(set_m), str(event), str(channel_id),
+                          str(author_mention)))
 
     saved_alarms = read_file('mem_txt_files/alarms.txt').split('\n')
 
@@ -295,7 +337,7 @@ def save_alarm(set_h, set_m, event, channel_id, author_mention):
             save = save + alarm + '\n'
         else:
             save = save + alarm
-    
+
     write_file('mem_txt_files/alarms.txt', save)
 
 
@@ -312,12 +354,18 @@ async def set_alarm(set_h, set_m, event, channel_id, author_mention):
         delta_t = int(set_h) * 60 + int(set_m) - (now_h * 60 + now_m)
 
     channel = client.get_channel(int(channel_id))
-    print('Alarm set to {0}:{1} {2}. Remaining time: {3} hour(s) {4} minute(s)'.format(set_h, set_m, event, delta_t // 60, delta_t % 60))
-    await asyncio.sleep(int(delta_t * 60)) 
+    print(
+        'Alarm set to {0}:{1} {2}. Remaining time: {3} hour(s) {4} minute(s)'.
+        format(set_h, set_m, event, delta_t // 60, delta_t % 60))
+    await asyncio.sleep(int(delta_t * 60))
     print('done', channel)
-    await channel.send(embed=new_embed(title='Alarm' + event, description='{0}:{1} - {2}'.format(set_h, set_m, author_mention), color=0xff0000))
+    await channel.send(embed=new_embed(title='Alarm' + event,
+                                       description='{0}:{1} - {2}'.format(
+                                           set_h, set_m, author_mention),
+                                       color=0xff0000))
 
-    del_alarm = '|'.join((str(set_h), str(set_m), str(event), str(channel_id), str(author_mention)))
+    del_alarm = '|'.join((str(set_h), str(set_m), str(event), str(channel_id),
+                          str(author_mention)))
 
     f = open("mem_txt_files/alarms.txt", "r")
     lines = [line.replace('\n', '') for line in f.readlines()]
@@ -342,12 +390,169 @@ async def alarm_error(ctx, error):
 
 
 # GAMES functions
+
+# load words to choose from
+with open('mem_txt_files/words.txt', 'r') as file:
+    dictionary = [word.rstrip('\n') for word in file.readlines()]
+
+drawings = [
+    '', '''
+
+
+
+
+
+=========''', '''
+                |
+                |
+                |
+                |
+                |
+=========''', '''
+      +----+
+       |        |
+                |
+                |
+                |
+                |
+=========''', '''
+      +----+
+       |        |
+      O       |
+                |
+                |
+                |
+=========''', '''
+      +----+
+       |        |
+      O       |
+       |        |
+                |
+                |
+=========''', '''
+      +----+
+       |        |
+      O       |
+     /|        |
+                |
+                |
+=========''', '''
+      +----+
+       |        |
+      O       |
+     /|\      |
+                 |
+                 |
+=========''', '''
+      +----+
+       |        |
+      O       |
+     /|\      |
+     /          |
+                 |
+=========''', '''
+      +----+
+       |        |
+      O       |
+     /|\      |
+     / \      |
+                 |
+========='''
+]
+
+word = ''
+game_state = 0
+gameOver1 = True
+guessed_letters = []
+
+
+@client.command()
+async def hangman(ctx):
+    global word
+    global game_state
+    global guessed_letters
+    global gameOver1
+
+    if gameOver1:
+        await ctx.send(f'Welcome to Hangman!\n{drawings[0]}')
+        word = choice(dictionary)
+        print(word)
+        game_state = 0
+        guessed_letters = []
+        gameOver1 = False
+    else:
+        await ctx.send('Game in progress')
+
+    await ctx.message.delete()
+
+
+@client.command()
+async def ltr(ctx, ltr):
+    global word
+    global game_state
+    global guessed_letters
+    global gameOver1
+
+    if not gameOver1:
+        if ltr.isalpha() and len(ltr) == 1:
+            if ltr in guessed_letters:
+                await ctx.send('Already used!')
+            else:
+                guessed_letters.append(ltr)
+
+                display = word
+                for char in display:
+                    if char not in guessed_letters:
+                        display = display.replace(char, '-')
+
+                if ltr not in word:
+                    game_state += 1
+                    await ctx.send(f'Nope!{drawings[game_state]}')
+                else:
+                    await ctx.send('Yay!')
+                await ctx.send('Word: ' + display)
+
+                if '-' not in display or game_state == len(drawings) - 1:
+                    if game_state == len(drawings) - 1:  # lost
+                        await ctx.send(
+                            f'Oh no, he\'s dead!\nThe word was: {word}')
+                    else:
+                        await ctx.send('Congratulations, you won!')
+                    word = ''
+                    game_state = 0
+                    gameOver1 = True
+                    guessed_letters = []
+        else:
+            await ctx.send('Please enter a single letter.')
+    else:
+        await ctx.send('No game in progress')
+
+    await ctx.message.delete()
+
+
+@ltr.error
+async def ltr_error(ctx, error):
+    if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
+        await ctx.send('Please specify a letter.')
+        await ctx.message.delete()
+
+
 @client.command()
 async def undress(ctx):
     names = kdo_koho()
-    embed = new_embed(title='Flaška', description='{0} is asking {1}'.format(names[0], names[1]), color=0x940096)
-    embed.set_author(name='Iris\'s Games Repository', url='https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot', icon_url='https://i.imgur.com/sDOZ6KF.jpg')
-    embed.set_thumbnail(url='https://media.istockphoto.com/photos/empty-bottle-from-transparent-glass-with-reflection-isolated-on-a-picture-id1033890540?s=612x612')
+    embed = new_embed(title='Flaška',
+                      description='{0} is asking {1}'.format(
+                          names[0], names[1]),
+                      color=0x940096)
+    embed.set_author(
+        name='Iris\'s Games Repository',
+        url=
+        'https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot',
+        icon_url='https://i.imgur.com/sDOZ6KF.jpg')
+    embed.set_thumbnail(
+        url=
+        'https://media.istockphoto.com/photos/empty-bottle-from-transparent-glass-with-reflection-isolated-on-a-picture-id1033890540?s=612x612'
+    )
     embed.set_footer(text='Choose your question carefully')
     await ctx.send(embed=embed)
     await ctx.message.delete()
@@ -363,9 +568,13 @@ async def tictactoe(ctx, pl2: discord.Member):
 
     if gameOver:
         global board
-        board = [':white_large_square:', ':white_large_square:', ':white_large_square:',
-                 ':white_large_square:', ':white_large_square:', ':white_large_square:',
-                 ':white_large_square:', ':white_large_square:', ':white_large_square:']
+        board = [
+            ':white_large_square:', ':white_large_square:',
+            ':white_large_square:', ':white_large_square:',
+            ':white_large_square:', ':white_large_square:',
+            ':white_large_square:', ':white_large_square:',
+            ':white_large_square:'
+        ]
         turn = ''
         gameOver = False
         count = 0
@@ -399,7 +608,9 @@ async def tictactoe_error(ctx, error):
     if isinstance(error, discord.ext.commands.errors.MissingRequiredArgument):
         await ctx.send('Please mention an opponent.')
     elif isinstance(error, discord.ext.commands.errors.BadArgument):
-        await ctx.send('Please make sure to mention players properly (ie. <@813482693396398113>)')
+        await ctx.send(
+            'Please make sure to mention players properly (ie. <@813482693396398113>)'
+        )
 
 
 @client.command()
@@ -442,10 +653,12 @@ async def place(ctx, pos: int):
                     # switch turns
                     if turn == player1:
                         turn = player2
-                        await ctx.send('It\'s <@{0}>\'s turn.'.format(player2.id))
+                        await ctx.send('It\'s <@{0}>\'s turn.'.format(
+                            player2.id))
                     elif turn == player2:
                         turn = player1
-                        await ctx.send('It\'s <@{0}>\'s turn.'.format(player1.id))
+                        await ctx.send('It\'s <@{0}>\'s turn.'.format(
+                            player1.id))
 
             else:
                 await ctx.send('Use a valid position')
@@ -467,7 +680,8 @@ async def place_error(ctx, error):
 def check_winner(mark):
     global gameOver
     for condition in winning_conditions:
-        if board[condition[0]] == mark and board[condition[1]] == mark and board[condition[2]] == mark:
+        if board[condition[0]] == mark and board[
+                condition[1]] == mark and board[condition[2]] == mark:
             gameOver = True
 
 
@@ -479,18 +693,19 @@ async def test(ctx, *seconds):
     for second in seconds:
         task = asyncio.create_task(sleep_parallel(ctx, second))
         tasks.append(task)
-    
+
     for task in tasks:
         await task
 
 
-
 async def sleep_parallel(ctx, seconds):
     print('sleeping at {}'.format(datetime.now().strftime('%S')))
-    await ctx.send('sleeping at {}'.format(datetime.now().strftime('%H:%M:%S')))
+    await ctx.send('sleeping at {}'.format(datetime.now().strftime('%H:%M:%S'))
+                   )
     await asyncio.sleep(int(seconds))
     print('waking up at {}'.format(datetime.now().strftime('%S')))
-    await ctx.send('waking up at {}'.format(datetime.now().strftime('%H:%M:%S')))
+    await ctx.send('waking up at {}'.format(
+        datetime.now().strftime('%H:%M:%S')))
 
 
 # IRIS CONVERSATION functions
@@ -526,9 +741,14 @@ async def iris(ctx, *args):
 @client.command()
 async def help(ctx, cmnd=None):
     if cmnd is not None and cmnd in all_commands:
-        await ctx.send(embed=new_embed(title=cmnd, description=all_commands[cmnd], color=0xff9d00))
+        await ctx.send(embed=new_embed(
+            title=cmnd, description=all_commands[cmnd], color=0xff9d00))
     else:
-        await ctx.send(embed=new_embed(title='Available Commands', description='Here are all the commands you can use.', color=0xf1a82d, fields=sorted_commands))
+        await ctx.send(embed=new_embed(
+            title='Available Commands',
+            description='Here are all the commands you can use.',
+            color=0xf1a82d,
+            fields=sorted_commands))
     await ctx.message.delete()
 
 
@@ -545,7 +765,9 @@ async def info(ctx):
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, CommandNotFound):
-        await ctx.send('{} is not a valid command. Better luck next time!'.format(ctx.message.content))
+        await ctx.send(
+            '{} is not a valid command. Better luck next time!'.format(
+                ctx.message.content))
         await ctx.message.delete()
         return
     raise error
@@ -571,11 +793,23 @@ def kdo_koho():
     return return_list
 
 
-def new_embed(title, description=None, color=None, timestamp=True, footer=True, author=False, fields=None, fields_inline=False, thumbnail=False):
+def new_embed(title,
+              description=None,
+              color=None,
+              timestamp=True,
+              footer=True,
+              author=False,
+              fields=None,
+              fields_inline=False,
+              thumbnail=False):
     embed = discord.Embed()
     embed.title = title
     if author:
-        embed.set_author(name='Iris', url='https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot', icon_url='https://i.imgur.com/sDOZ6KF.jpg')
+        embed.set_author(
+            name='Iris',
+            url=
+            'https://discord.com/api/oauth2/authorize?client_id=813482693396398113&permissions=519232&scope=bot',
+            icon_url='https://i.imgur.com/sDOZ6KF.jpg')
     embed.description = description if description is not None else None
     embed.color = color if color is not None else 0x004499
     if thumbnail is not False:
@@ -589,10 +823,14 @@ def new_embed(title, description=None, color=None, timestamp=True, footer=True, 
 
     if type(fields) == dict:
         for field in fields:
-            embed.add_field(name=field, value=fields[field], inline=fields_inline)
+            embed.add_field(name=field,
+                            value=fields[field],
+                            inline=fields_inline)
     elif type(fields) == list:
         for field in fields:
-            embed.add_field(name=field[0], value=field[1], inline=fields_inline)
+            embed.add_field(name=field[0],
+                            value=field[1],
+                            inline=fields_inline)
 
     return embed
 
